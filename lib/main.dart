@@ -72,6 +72,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Text('Sign out'),
               onPressed: auth.signOut,
             ),
+            UserList(),
           ],
           if (!loggedIn) ...[
             TextFormField(
@@ -103,5 +104,31 @@ class _LoginPageState extends State<LoginPage> {
 
     emailCtrl.clear();
     passwordCtrl.clear();
+  }
+}
+
+class UserList extends StatefulWidget {
+  @override
+  _UserListState createState() => _UserListState();
+}
+
+class _UserListState extends State<UserList> {
+  @override
+  Widget build(BuildContext context) {
+    var users = Provider.of<List<User>>(context);
+
+    return Container(
+      height: 400,
+      child: ListView.builder(
+        itemCount: users.length,
+        itemBuilder: (BuildContext context, int index) {
+          User user = users[index];
+          return ListTile(
+            title: Text("이름 - ${user.name}"),
+            leading: Text("나이 - ${user.age}"),
+          );
+        },
+      ),
+    );
   }
 }
