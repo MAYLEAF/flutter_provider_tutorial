@@ -24,6 +24,8 @@ dependencies:
   flutter:
     sdk: flutter
   provider: ^5.0.0
+  cloud_firestore: ^2.2.2
+  firebase_auth: ^1.4.1
 
 
 
