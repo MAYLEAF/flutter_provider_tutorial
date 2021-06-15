@@ -1,155 +1,107 @@
+import 'package:firebase_auth/firebase_auth.dart' as FirebaseAuth;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:provider_exam/database/database_provider.dart';
+import 'package:provider_exam/model/user.dart' as Users;
 
-void main() {
-  runApp(MyApp());
+typedef FirebaseUser = FirebaseAuth.User;
+typedef User = Users.User;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  var fb = await Firebase.initializeApp();
+
+  runApp((LoginApp()));
 }
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+class LoginApp extends StatelessWidget {
+  DatabaseProvider db = DatabaseProvider();
+
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<Counter>(
-        create: (_) => Counter(0),
-        child: MaterialApp(
-          title: "Flutter Value",
-          theme: ThemeData(
-            primarySwatch: Colors.blue,
-          ),
-          home: HomePage(),
-        ));
-  }
-}
-
-class HomePage extends StatefulWidget {
-  HomePage({Key? key}) : super(key: key);
-
-  @override
-  _HomePageState createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  @override
-  Widget build(BuildContext context) {
-    final counter = Provider.of<Counter>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Provider demo'),
-      ),
-      body: Center(
-          child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text("${counter.getCounter()}",
-              style: Theme.of(context).textTheme.display1),
-          TextButton(
-            onPressed: openFirstPage,
-            child: Text('first page'),
-          ),
-          TextButton(
-            onPressed: openSecondPage,
-            child: Text('second page'),
-          )
-        ],
-      )),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            onPressed: counter.increment,
-            tooltip: 'Increment',
-            child: Icon(Icons.add),
-            heroTag: null,
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          FloatingActionButton(
-            onPressed: counter.decrement,
-            tooltip: 'Decrement',
-            child: Icon(Icons.remove),
-            heroTag: null,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future openFirstPage() {
-    return Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => FirstPage()),
-    );
-  }
-
-  Future openSecondPage() {
-    return Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => SecondPage()),
-    );
-  }
-}
-
-class FirstPage extends StatefulWidget {
-  @override
-  _FirstPageState createState() => _FirstPageState();
-}
-
-class _FirstPageState extends State<FirstPage> {
-  @override
-  Widget build(BuildContext context) {
-    final counter = Provider.of<Counter>(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('first page'),
-      ),
-      body: Center(
-        child: Container(
-          child: Text('first page counter ${counter.getCounter()}'),
+    return MultiProvider(
+      providers: [
+        StreamProvider<FirebaseUser?>.value(
+          value: FirebaseAuth.FirebaseAuth.instance.authStateChanges(),
+          initialData: null,
         ),
+        StreamProvider<List<User>>.value(
+          value: db.getUsers(),
+          initialData: [],
+        )
+      ],
+      child: MaterialApp(
+        title: '인증 프로바이더',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        home: LoginPage(),
       ),
     );
   }
 }
 
-class SecondPage extends StatefulWidget {
+class LoginPage extends StatefulWidget {
   @override
-  _SecondPageState createState() => _SecondPageState();
+  _LoginPageState createState() => _LoginPageState();
 }
 
-class _SecondPageState extends State<SecondPage> {
+class _LoginPageState extends State<LoginPage> {
+  TextEditingController emailCtrl = TextEditingController();
+  TextEditingController passwordCtrl = TextEditingController();
+  Map data = Map();
+
+  var auth = FirebaseAuth.FirebaseAuth.instance;
+
   @override
   Widget build(BuildContext context) {
-    final counter = Provider.of<Counter>(context);
+    var user = Provider.of<FirebaseUser?>(context);
+    var loggedIn = user != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('first page'),
-      ),
-      body: Center(
-        child: Container(
-          child: Text('first page counter ${counter.getCounter()}'),
+        appBar: AppBar(
+          title: Text(
+            '로그인 페이지',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
-      ),
-    );
+        body: Column(children: [
+          if (loggedIn) ...[
+            ElevatedButton(
+              child: Text('Sign out'),
+              onPressed: auth.signOut,
+            ),
+          ],
+          if (!loggedIn) ...[
+            TextFormField(
+              controller: emailCtrl,
+              decoration: InputDecoration(
+                icon: Icon(Icons.email),
+                hintText: '이메일을 적어주세요.',
+              ),
+            ),
+            TextFormField(
+              controller: passwordCtrl,
+              decoration: InputDecoration(
+                icon: Icon(Icons.password),
+                hintText: '비밀번호를 적어주세요',
+              ),
+            ),
+            ElevatedButton(
+              child: Text("Sign up"),
+              onPressed: signUp,
+            )
+          ],
+        ]));
   }
-}
 
-class Counter with ChangeNotifier {
-  int _counter;
+  void signUp() {
+    String email = emailCtrl.text;
+    String password = passwordCtrl.text;
+    auth.createUserWithEmailAndPassword(email: email, password: password);
 
-  Counter(this._counter);
-
-  getCounter() => _counter;
-  setCounter(int counter) => _counter = counter;
-
-  void increment() {
-    _counter++;
-    notifyListeners();
-  }
-
-  void decrement() {
-    _counter--;
-    notifyListeners();
+    emailCtrl.clear();
+    passwordCtrl.clear();
   }
 }
